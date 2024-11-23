@@ -102,5 +102,22 @@ def monitor_twitter():
     except Exception as e:
         print(f"Error fetching tweets: {e}")
 
+def is_within_time_window():
+    # Get current time in EAT (UTC+3)
+    current_time = time.gmtime(time.time() + 3 * 3600)  # UTC+3 for EAT
+    current_hour = current_time.tm_hour
+    
+    # Check if current time is between 19:00 (7PM) and 21:00 (9PM)
+    return 19 <= current_hour < 21
+
 if __name__ == "__main__":
-    monitor_twitter()
+    while True:
+        if is_within_time_window():
+            print("Running Twitter monitor...")
+            monitor_twitter()
+            # Sleep for 15 minutes before checking again
+            time.sleep(15 * 60)
+        else:
+            # Check again in 5 minutes
+            print("Outside monitoring window. Waiting...")
+            time.sleep(5 * 60)
