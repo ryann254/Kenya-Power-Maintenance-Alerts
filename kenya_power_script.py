@@ -8,6 +8,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 import time
+import logging
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,8 +29,10 @@ GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")  # Gmail password stored in environ
 SUBSCRIBED_EMAILS = os.getenv("SUBSCRIBED_EMAILS").strip('[]').split(',')
 ESTATE_NAMES = os.getenv("ESTATE_NAMES").strip('[]').split(',')
 
-# Initialize Tesseract path - modify based on your OS
-if os.name == 'nt':  # Windows
+# Initialize Tesseract path - modify for Railway deployment
+if os.getenv('RAILWAY_ENVIRONMENT'):
+    pytesseract.pytesseract.tesseract_cmd = r"/usr/bin/tesseract"
+elif os.name == 'nt':  # Windows
     pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 else:  # Linux/MacOS
     pytesseract.pytesseract.tesseract_cmd = r"/usr/bin/tesseract"
@@ -42,9 +51,9 @@ def send_email(subject, body):
             server.starttls()
             server.login(GMAIL_USER, GMAIL_PASSWORD)
             server.send_message(msg)
-            print("Email sent successfully.")
+            logging.info("Email sent successfully.")
     except Exception as e:
-        print(f"Error sending email: {e}")
+        logging.error(f"Error sending email: {e}")
 
 # Function to analyze tweet content and images for estate name
 def analyze_tweet(content, images):
@@ -88,7 +97,7 @@ def monitor_twitter():
         )
 
         if response.data is None:
-            print("No tweets found")
+            logging.info("No tweets found")
             return
 
         tweets = response.data
@@ -107,13 +116,13 @@ def monitor_twitter():
                     body=f"Kenya Power posted about maintenance in {estates_string}:\n\n{content}\n\nTweet Link: https://x.com/{tweet.id}"
                 )
     except tweepy.TooManyRequests:
-        print("Rate limit reached. Waiting 15 minutes before trying again...")
+        logging.info("Rate limit reached. Waiting 15 minutes before trying again...")
         time.sleep(15 * 60)  # Wait 15 minutes
     except tweepy.TwitterServerError:
-        print("Twitter server error. Waiting 1 minute before trying again...")
+        logging.info("Twitter server error. Waiting 1 minute before trying again...")
         time.sleep(60)  # Wait 1 minute
     except Exception as e:
-        print(f"Error fetching tweets: {e}")
+        logging.error(f"Error fetching tweets: {e}")
 
 def is_within_time_window():
     # Get current time in EAT (UTC+3)
@@ -126,11 +135,11 @@ def is_within_time_window():
 if __name__ == "__main__":
     while True:
         if is_within_time_window():
-            print("Running Twitter monitor...")
+            logging.info("Running Twitter monitor...")
             monitor_twitter()
             # Sleep for 15 minutes before checking again
             time.sleep(15 * 60)
         else:
             # Check again in 5 minutes
-            print("Outside monitoring window. Waiting...")
+            logging.info("Outside monitoring window. Waiting...")
             time.sleep(5 * 60)
