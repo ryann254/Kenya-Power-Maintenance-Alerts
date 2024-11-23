@@ -19,8 +19,8 @@ TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
 GMAIL_USER = os.getenv("GMAIL_USER")
 GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")  # Gmail password stored in environment variable
 
-# Estate name to check in tweets (case-insensitive)
-ESTATE_NAME = os.getenv("ESTATE_NAME")
+SUBSCRIBED_EMAILS = os.getenv("SUBSCRIBED_EMAILS").strip('[]').split(',')
+ESTATE_NAMES = os.getenv("ESTATE_NAMES").strip('[]').split(',')
 
 # Initialize Tesseract path - modify based on your OS
 if os.name == 'nt':  # Windows
@@ -33,7 +33,7 @@ def send_email(subject, body):
     try:
         msg = MIMEMultipart()
         msg['From'] = GMAIL_USER
-        msg['To'] = GMAIL_USER
+        msg['To'] = ",".join(SUBSCRIBED_EMAILS)
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
@@ -48,26 +48,37 @@ def send_email(subject, body):
 
 # Function to analyze tweet content and images for estate name
 def analyze_tweet(content, images):
-    if ESTATE_NAME.lower() in content.lower():
-        return True
+    matched_estates = set()  # Use a set to prevent duplicates
+    
+    # Check if any estate name is in the tweet content
+    for estate in ESTATE_NAMES:
+        if estate.strip().lower() in content.lower():
+            matched_estates.add(estate.strip())
 
+    # Check images
     for image_url in images:
         response = requests.get(image_url, stream=True)
         if response.status_code == 200:
             img = Image.open(response.raw)
             text = pytesseract.image_to_string(img)
-            if ESTATE_NAME.lower() in text.lower():
-                return True
-    return False
+            # Check if any estate name is in the OCR text
+            for estate in ESTATE_NAMES:
+                if estate.strip().lower() in text.lower():
+                    matched_estates.add(estate.strip())
+                    
+    return bool(matched_estates), list(matched_estates)  # Convert set back to list before returning
 
 # Main function to monitor Twitter using search_recent_tweets
 def monitor_twitter():
     # Initialize the Tweepy Client for API v2
     client = tweepy.Client(bearer_token=TWITTER_BEARER_TOKEN)
 
-    try:        
-        # Search for recent tweets from Kenya Power's official account
-        query = f"from:KenyaPower_Care {ESTATE_NAME} -is:retweet -is:reply"
+    try:      
+        # Search for recent tweets from Kenya Power's official account  
+        # Create a query with OR conditions for each estate name
+        estate_conditions = " OR ".join(f'"{name.strip()}"' for name in ESTATE_NAMES)
+        query = f'from:KenyaPower_Care ({estate_conditions}) -is:retweet -is:reply'
+        
         response = client.search_recent_tweets(
             query=query,
             max_results=10,  # Fetch up to 10 recent tweets
@@ -88,10 +99,12 @@ def monitor_twitter():
             media_keys = tweet.attachments.get("media_keys", []) if tweet.attachments else []
             images = [media_map[key] for key in media_keys]
 
-            if analyze_tweet(content, images):
+            has_matches, matched_estates = analyze_tweet(content, images)
+            if has_matches:
+                estates_string = ", ".join(matched_estates)
                 send_email(
                     subject="Power Maintenance Alert",
-                    body=f"Kenya Power posted about maintenance in {ESTATE_NAME}:\n\n{content}\n\nTweet Link: https://x.com/{tweet.id}"
+                    body=f"Kenya Power posted about maintenance in {estates_string}:\n\n{content}\n\nTweet Link: https://x.com/{tweet.id}"
                 )
     except tweepy.TooManyRequests:
         print("Rate limit reached. Waiting 15 minutes before trying again...")
