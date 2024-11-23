@@ -6,16 +6,20 @@ from PIL import Image
 import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Twitter API credentials (Bearer Token for API v2)
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
 
 # Gmail credentials
-GMAIL_USER = "brian.mutua.official@gmail.com"
+GMAIL_USER = os.getenv("GMAIL_USER")
 GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")  # Gmail password stored in environment variable
 
 # Estate name to check in tweets (case-insensitive)
-ESTATE_NAME = "Donholm"
+ESTATE_NAME = os.getenv("ESTATE_NAME")
 
 # Initialize Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
@@ -79,7 +83,7 @@ def monitor_twitter():
             if analyze_tweet(content, images):
                 send_email(
                     subject="Power Maintenance Alert",
-                    body=f"Kenya Power posted about maintenance in Donholm:\n\n{content}\n\nTweet Link: https://x.com/{tweet.id}"
+                    body=f"Kenya Power posted about maintenance in {ESTATE_NAME}:\n\n{content}\n\nTweet Link: https://x.com/{tweet.id}"
                 )
     except Exception as e:
         print(f"Error fetching tweets: {e}")
