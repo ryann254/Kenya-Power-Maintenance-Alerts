@@ -7,6 +7,7 @@ import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
+import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,8 +22,11 @@ GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")  # Gmail password stored in environ
 # Estate name to check in tweets (case-insensitive)
 ESTATE_NAME = os.getenv("ESTATE_NAME")
 
-# Initialize Tesseract path
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Initialize Tesseract path - modify based on your OS
+if os.name == 'nt':  # Windows
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+else:  # Linux/MacOS
+    pytesseract.pytesseract.tesseract_cmd = r"/usr/bin/tesseract"
 
 # Function to send email alert
 def send_email(subject, body):
@@ -61,9 +65,9 @@ def monitor_twitter():
     # Initialize the Tweepy Client for API v2
     client = tweepy.Client(bearer_token=TWITTER_BEARER_TOKEN)
 
-    try:
-        # Search for recent tweets mentioning Kenya Power with your estate name
-        query = f"Kenya Power {ESTATE_NAME}"
+    try:        
+        # Search for recent tweets from Kenya Power's official account
+        query = f"from:KenyaPower_Care {ESTATE_NAME} -is:retweet -is:reply"
         response = client.search_recent_tweets(
             query=query,
             max_results=10,  # Fetch up to 10 recent tweets
@@ -72,9 +76,13 @@ def monitor_twitter():
             media_fields=["url"]  # Get media URLs
         )
 
-        tweets = response.data or []  # Fallback if no tweets are found
-        media_map = {media.media_key: media.url for media in response.includes.get("media", [])}
+        if response.data is None:
+            print("No tweets found")
+            return
 
+        tweets = response.data
+        media_map = {media.media_key: media.url for media in response.includes.get("media", [])}
+        
         for tweet in tweets:
             content = tweet.text
             media_keys = tweet.attachments.get("media_keys", []) if tweet.attachments else []
@@ -85,6 +93,12 @@ def monitor_twitter():
                     subject="Power Maintenance Alert",
                     body=f"Kenya Power posted about maintenance in {ESTATE_NAME}:\n\n{content}\n\nTweet Link: https://x.com/{tweet.id}"
                 )
+    except tweepy.TooManyRequests:
+        print("Rate limit reached. Waiting 15 minutes before trying again...")
+        time.sleep(15 * 60)  # Wait 15 minutes
+    except tweepy.TwitterServerError:
+        print("Twitter server error. Waiting 1 minute before trying again...")
+        time.sleep(60)  # Wait 1 minute
     except Exception as e:
         print(f"Error fetching tweets: {e}")
 
