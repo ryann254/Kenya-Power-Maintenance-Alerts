@@ -10,7 +10,9 @@ from email.mime.multipart import MIMEMultipart
 import time
 import logging
 
-load_dotenv()
+# Only load .env file in development, not on Railway
+if not os.getenv('RAILWAY_ENVIRONMENT'):
+    load_dotenv()
 
 # Set up logging
 logging.basicConfig(
