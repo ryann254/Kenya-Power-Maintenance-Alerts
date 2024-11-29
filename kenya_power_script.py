@@ -19,6 +19,10 @@ logging.basicConfig(
 # Load environment variables from .env file
 load_dotenv()
 
+# After load_dotenv()
+logging.info(f"Raw SUBSCRIBED_EMAILS: '{os.getenv('SUBSCRIBED_EMAILS')}'")
+logging.info(f"Raw ESTATE_NAMES: '{os.getenv('ESTATE_NAMES')}'")
+
 # Twitter API credentials (Bearer Token for API v2)
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
 
@@ -27,23 +31,17 @@ GMAIL_USER = os.getenv("GMAIL_USER")
 GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")  # Gmail password stored in environment variable
 
 # Safer environment variable handling with defaults
-SUBSCRIBED_EMAILS = os.getenv("SUBSCRIBED_EMAILS", "").split(',')
-ESTATE_NAMES = os.getenv("ESTATE_NAMES", "").split(',')
+SUBSCRIBED_EMAILS = [email.strip() for email in os.getenv("SUBSCRIBED_EMAILS", "").split(',') if email.strip()]
+ESTATE_NAMES = [name.strip() for name in os.getenv("ESTATE_NAMES", "").split(',') if name.strip()]
 
-# Add validation for SUBSCRIBED_EMAILS and ESTATE_NAMES
-if not SUBSCRIBED_EMAILS or SUBSCRIBED_EMAILS == ['']:
-    logging.info(SUBSCRIBED_EMAILS)
-    logging.error("No subscribed emails found in environment variables")
+# Add validation with better debugging
+if not SUBSCRIBED_EMAILS:
+    logging.error(f"No subscribed emails found. Raw value: '{os.getenv('SUBSCRIBED_EMAILS')}'")
     SUBSCRIBED_EMAILS = []
-else:
-    SUBSCRIBED_EMAILS = [email.strip() for email in SUBSCRIBED_EMAILS]
 
-if not ESTATE_NAMES or ESTATE_NAMES == ['']:
-    logging.info(ESTATE_NAMES)
-    logging.error("No estate names found in environment variables")
+if not ESTATE_NAMES:
+    logging.error(f"No estate names found. Raw value: '{os.getenv('ESTATE_NAMES')}'")
     ESTATE_NAMES = []
-else:
-    ESTATE_NAMES = [name.strip() for name in ESTATE_NAMES]
 
 # Initialize Tesseract path - modify for Railway deployment
 if os.getenv('RAILWAY_ENVIRONMENT'):
