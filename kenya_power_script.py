@@ -10,9 +10,7 @@ from email.mime.multipart import MIMEMultipart
 import time
 import logging
 
-# Only load .env file in development, not on Railway
-if not os.getenv('RAILWAY_ENVIRONMENT'):
-    load_dotenv()
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(
@@ -20,29 +18,39 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-logging.info(f"Raw GMAIL_USER: '{os.getenv('GMAIL_USER')}'")
-logging.info(f"Raw GMAIL_PASSWORD: '{os.getenv('GMAIL_PASSWORD')}'")
-logging.info(f"Raw SUBSCRIBED_EMAILS: '{os.getenv('SUBSCRIBED_EMAILS')}'")
-logging.info(f"Raw ESTATE_NAMES: '{os.getenv('ESTATE_NAMES')}'")
-
 # Twitter API credentials (Bearer Token for API v2)
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
-
 # Gmail credentials
 GMAIL_USER = os.getenv("GMAIL_USER")
 GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")  # Gmail password stored in environment variable
-
 # Safer environment variable handling with defaults
 SUBSCRIBED_EMAILS = [email.strip() for email in os.getenv("SUBSCRIBED_EMAILS", "").split(',') if email.strip()]
 ESTATE_NAMES = [name.strip() for name in os.getenv("ESTATE_NAMES", "").split(',') if name.strip()]
 
-# Initialize Tesseract path - modify for Railway deployment
-if os.getenv('RAILWAY_ENVIRONMENT'):
-    pytesseract.pytesseract.tesseract_cmd = r"/usr/bin/tesseract"
-elif os.name == 'nt':  # Windows
+if os.name == 'nt':  # Windows
     pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-else:  # Linux/MacOS
+else:  # Linux/MacOS/Remote Environment
     pytesseract.pytesseract.tesseract_cmd = r"/usr/bin/tesseract"
+
+# Add validation function after the initial env loading
+def validate_environment_variables():
+    required_vars = {
+        "TWITTER_BEARER_TOKEN": os.getenv("TWITTER_BEARER_TOKEN"),
+        "GMAIL_USER": os.getenv("GMAIL_USER"),
+        "GMAIL_PASSWORD": os.getenv("GMAIL_PASSWORD"),
+        "SUBSCRIBED_EMAILS": os.getenv("SUBSCRIBED_EMAILS"),
+        "ESTATE_NAMES": os.getenv("ESTATE_NAMES")
+    }
+    
+    missing_vars = [var for var, value in required_vars.items() if not value]
+    
+    if missing_vars:
+        logging.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+    
+    if not SUBSCRIBED_EMAILS:
+        logging.warning("No subscribed emails found in environment variables")
+    if not ESTATE_NAMES:
+        logging.warning("No estate names found in environment variables")
 
 # Function to send email alert
 def send_email(subject, body):
@@ -140,13 +148,18 @@ def is_within_time_window():
     return 19 <= current_hour < 21
 
 if __name__ == "__main__":
-    while True:
-        if is_within_time_window():
-            logging.info("Running Twitter monitor...")
-            monitor_twitter()
-            # Sleep for 15 minutes before checking again
-            time.sleep(15 * 60)
-        else:
-            # Check again in 5 minutes
-            logging.info("Outside monitoring window. Waiting...")
-            time.sleep(5 * 60)
+    try:
+        validate_environment_variables()
+        while True:
+            if is_within_time_window():
+                logging.info("Running Twitter monitor...")
+                monitor_twitter()
+                # Sleep for 15 minutes before checking again
+                time.sleep(15 * 60)
+            else:
+                # Check again in 5 minutes
+                logging.info("Outside monitoring window. Waiting...")
+                time.sleep(5 * 60)
+    except EnvironmentError as e:
+        logging.error(f"Environment configuration error: {e}")
+        exit(1)
