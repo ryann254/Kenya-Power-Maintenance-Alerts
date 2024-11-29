@@ -6,6 +6,7 @@ from PIL import Image
 import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import os
 from dotenv import load_dotenv
 import time
 import logging
