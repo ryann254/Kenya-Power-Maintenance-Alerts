@@ -140,14 +140,13 @@ def is_within_time_window():
     return 19 <= current_hour < 21
 
 if __name__ == "__main__":
-    monitor_twitter()
-    # while True:
-    #     if is_within_time_window():
-    #         logging.info("Running Twitter monitor...")
-    #         monitor_twitter()
-    #         # Sleep for 15 minutes before checking again
-    #         time.sleep(15 * 60)
-    #     else:
-    #         # Check again in 5 minutes
-    #         logging.info("Outside monitoring window. Waiting...")
-    #         time.sleep(5 * 60)
+    while True:
+        if is_within_time_window():
+            logging.info("Running Twitter monitor...")
+            monitor_twitter()
+            # Sleep for 15 minutes before checking again
+            time.sleep(15 * 60)
+        else:
+            # Check again in 5 minutes
+            logging.info("Outside monitoring window. Waiting...")
+            time.sleep(5 * 60)
