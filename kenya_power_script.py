@@ -32,14 +32,14 @@ ESTATE_NAMES = os.getenv("ESTATE_NAMES", "").split(',')
 
 # Add validation for SUBSCRIBED_EMAILS and ESTATE_NAMES
 if not SUBSCRIBED_EMAILS or SUBSCRIBED_EMAILS == ['']:
-    logger.info(SUBSCRIBED_EMAILS)
+    logging.info(SUBSCRIBED_EMAILS)
     logging.error("No subscribed emails found in environment variables")
     SUBSCRIBED_EMAILS = []
 else:
     SUBSCRIBED_EMAILS = [email.strip() for email in SUBSCRIBED_EMAILS]
 
 if not ESTATE_NAMES or ESTATE_NAMES == ['']:
-    logger.info(ESTATE_NAMES)
+    logging.info(ESTATE_NAMES)
     logging.error("No estate names found in environment variables")
     ESTATE_NAMES = []
 else:
