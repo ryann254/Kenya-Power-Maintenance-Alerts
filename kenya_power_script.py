@@ -20,6 +20,8 @@ logging.basicConfig(
 load_dotenv()
 
 # After load_dotenv()
+logging.info(f"Raw GMAIL_USER: '{os.getenv('GMAIL_USER')}'")
+logging.info(f"Raw GMAIL_PASSWORD: '{os.getenv('GMAIL_PASSWORD')}'")
 logging.info(f"Raw SUBSCRIBED_EMAILS: '{os.getenv('SUBSCRIBED_EMAILS')}'")
 logging.info(f"Raw ESTATE_NAMES: '{os.getenv('ESTATE_NAMES')}'")
 
