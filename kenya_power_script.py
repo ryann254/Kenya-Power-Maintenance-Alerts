@@ -16,8 +16,23 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Load environment variables from .env file
-load_dotenv()
+# Modified environment variable loading
+if os.getenv('RAILWAY_ENVIRONMENT'):
+    # On Railway, environment variables are set directly
+    logging.info("Running on Railway - using Railway environment variables")
+else:
+    # Local development - load from .env file
+    logging.info("Running locally - loading from .env file")
+    load_dotenv()
+
+# Add validation for required environment variables
+required_vars = ['GMAIL_USER', 'GMAIL_PASSWORD', 'SUBSCRIBED_EMAILS', 'ESTATE_NAMES', 'TWITTER_BEARER_TOKEN']
+missing_vars = [var for var in required_vars if not os.getenv(var)]
+
+if missing_vars:
+    error_msg = f"Missing required environment variables: {', '.join(missing_vars)}"
+    logging.error(error_msg)
+    raise ValueError(error_msg)
 
 # After load_dotenv()
 logging.info(f"Raw GMAIL_USER: '{os.getenv('GMAIL_USER')}'")
